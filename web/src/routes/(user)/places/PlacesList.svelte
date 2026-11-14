@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { PlacesGroupBy, type PlacesViewSettings } from '#lib/stores/preferences.store.ts';
+  import { locale, PlacesGroupBy, type PlacesViewSettings } from '#lib/stores/preferences.store.ts';
   import { type PlacesGroup } from '#lib/utils/places-utils.ts';
   import { normalizeSearchString } from '#lib/utils/string-utils.ts';
   import { type AssetResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiMapMarkerOff } from '@mdi/js';
   import { groupBy } from 'lodash-es';
+  import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
   import PlacesCardGroup from './PlacesCardGroup.svelte';
 
@@ -31,6 +32,18 @@
     [option: string]: (places: AssetResponseDto[]) => PlacesGroup[];
   }
 
+  // Sort using the user's configured locale so umlauts/diacritics are ordered
+  // the way the user expects (e.g. Ä after A in fi-FI) instead of by raw
+  // code point. See https://github.com/immich-app/immich/issues/22580
+  const collator = $derived(
+    new Intl.Collator(get(locale) === 'default' ? undefined : get(locale), { sensitivity: 'base' }),
+  );
+
+  const sortByCity = (places: AssetResponseDto[]) =>
+    [...places].sort((a, b) =>
+      collator.compare(a.exifInfo?.city ?? '', b.exifInfo?.city ?? ''),
+    );
+
   const groupOptions: PlacesGroupOption = {
     /** No grouping */
     [PlacesGroupBy.None]: (places): PlacesGroup[] => {
@@ -38,12 +51,12 @@
         {
           id: $t('places'),
           name: $t('places'),
-          places,
+          places: sortByCity(places),
         },
       ];
     },
 
-    /** Group by year */
+    /** Group by country */
     [PlacesGroupBy.Country]: (places): PlacesGroup[] => {
       const unknownCountry = $t('unknown_country');
 
@@ -56,13 +69,13 @@
         if (a === unknownCountry) {
           return 1;
         }
-        return b === unknownCountry ? -1 : a.localeCompare(b);
+        return b === unknownCountry ? -1 : collator.compare(a, b);
       });
 
       return sortedByCountryName.map(([country, places]) => ({
         id: country,
         name: country,
-        places,
+        places: sortByCity(places),
       }));
     },
   };
