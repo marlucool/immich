@@ -36,6 +36,9 @@ export class AlbumTable {
   @UpdateDateColumn()
   updatedAt!: Generated<Timestamp>;
 
+  @ForeignKeyColumn(() => AlbumTable, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+  parentId!: string | null;
+
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
