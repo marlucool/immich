@@ -43,6 +43,7 @@ const ContributorCountResponseSchema = z
 export const AlbumResponseSchema = z
   .object({
     id: z.uuidv4().describe('Album ID'),
+    parentId: z.uuidv4().nullable().describe('Parent album ID'),
     albumName: z.string().describe('Album name'),
     description: z
       .string()
@@ -131,6 +132,7 @@ export class CreateAlbumDto extends createZodDto({
     ),
   albumUsers: z.array(AlbumUserCreateSchema).optional().describe('Album users'),
   assetIds: z.array(z.uuidv4()).optional().describe('Initial asset IDs'),
+  parentId: z.uuidv4().nullable().optional().describe('Parent album ID'),
 }) {}
 
 export class AlbumsAddAssetsDto extends createZodDto({
@@ -161,6 +163,7 @@ export class UpdateAlbumDto extends createZodDto({
   albumThumbnailAssetId: z.uuidv4().optional().describe('Album thumbnail asset ID'),
   isActivityEnabled: z.boolean().optional().describe('Enable activity feed'),
   order: AssetOrderSchema.optional(),
+  parentId: z.uuidv4().nullable().optional().describe('Parent album ID'),
 }) {}
 
 export class GetAlbumsDto extends createZodDto({
@@ -199,6 +202,7 @@ export type MapAlbumDto = {
   createdAt: Date;
   updatedAt: Date;
   id: string;
+  parentId: string | null;
   isActivityEnabled: boolean;
   order: AssetOrder;
 };
@@ -235,6 +239,7 @@ export const mapAlbum = (entity: MaybeDehydrated<MapAlbumDto>, { auth }: { auth?
     createdAt: asDateTimeString(entity.createdAt),
     updatedAt: asDateTimeString(entity.updatedAt),
     id: entity.id,
+    parentId: entity.parentId,
     albumUsers: auth?.sharedLink ? [] : albumUsers,
     shared: hasSharedUser || hasSharedLink,
     hasSharedLink,
