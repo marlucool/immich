@@ -42,7 +42,7 @@
     }
 
     return [
-      { label: $t('no_parent_album'), value: '' },
+      { label: $t('none'), value: '' },
       ...albums
         .filter((candidate) => !excludedIds.has(candidate.id))
         .map((candidate) => ({ label: candidate.albumName || $t('unnamed_album'), value: candidate.id })),
