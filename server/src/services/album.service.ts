@@ -70,7 +70,7 @@ export class AlbumService extends BaseService {
       albumMetadata[metadata.albumId] = metadata;
     }
 
-    const visibleIds = new Set(visibleAlbumIds);
+    const visibleIds = new Set(visibleAlbumIds ?? []);
     return albums.map((album) => ({
       ...mapAlbum({
         ...album,
