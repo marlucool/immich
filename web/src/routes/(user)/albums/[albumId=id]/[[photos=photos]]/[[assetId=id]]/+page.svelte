@@ -53,8 +53,7 @@
   import { handlePromiseError } from '#lib/utils.ts';
   import { delay } from '#lib/utils/asset-utils.ts';
   import { isAlbumsRoute, navigate, type AssetGridRouteSearchParams } from '#lib/utils/navigation.ts';
-  import { AlbumUserRole, AssetVisibility, ReactionType } from '@immich/sdk';
-  import type { AlbumResponseDto } from '@immich/sdk';
+  import { AlbumUserRole, AssetVisibility, ReactionType, type AlbumResponseDto } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
   import {
     mdiAccountEye,
