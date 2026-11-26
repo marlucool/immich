@@ -81,11 +81,12 @@
   const albumQuery = createPreloadedQuery(() => getAlbumInfoQuery(params.albumId));
   const allAlbumsQuery = createPreloadedQuery(getAllAlbumsQuery);
   const album = $derived(albumQuery.data);
-  const childAlbums = $derived(
-    ((allAlbumsQuery.data ?? []) as (AlbumResponseDto & { parentId?: string | null })[]).filter(
-      ({ parentId }) => parentId === album.id,
-    ),
+  type NestedAlbumResponseDto = AlbumResponseDto & { parentId?: string | null };
+  const accessibleAlbums = $derived((allAlbumsQuery.data ?? []) as NestedAlbumResponseDto[]);
+  const parentAlbum = $derived(
+    accessibleAlbums.find(({ id }) => id === (album as NestedAlbumResponseDto).parentId),
   );
+  const childAlbums = $derived(accessibleAlbums.filter(({ parentId }) => parentId === album.id));
   onResourceDelete(
     () => `/albums/${album.id}`,
     () => void goto(Route.albums()),
@@ -330,6 +331,15 @@
           {#if viewMode !== AlbumPageViewMode.SELECT_THUMBNAIL}
             <!-- ALBUM TITLE -->
             <section class="pt-8 md:pt-24">
+              {#if parentAlbum}
+                <a
+                  class="mb-3 inline-flex items-center gap-2 text-sm text-immich-primary hover:underline dark:text-immich-dark-primary"
+                  href={Route.viewAlbum(parentAlbum)}
+                >
+                  <Icon icon={mdiArrowLeft} size="1rem" />
+                  {$t('parent_album')}: {parentAlbum.albumName}
+                </a>
+              {/if}
               <AlbumTitle id={album.id} albumName={album.albumName} {isEditor} />
 
               {#if album.assetCount > 0}
