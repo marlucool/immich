@@ -43,7 +43,7 @@ const ContributorCountResponseSchema = z
 export const AlbumResponseSchema = z
   .object({
     id: z.uuidv4().describe('Album ID'),
-    parentId: z.uuidv4().nullable().describe('Parent album ID'),
+    parentId: z.uuidv4().nullable().optional().describe('Parent album ID'),
     albumName: z.string().describe('Album name'),
     description: z
       .string()
