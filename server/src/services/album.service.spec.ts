@@ -390,6 +390,26 @@ describe(AlbumService.name, () => {
         auth.user.id,
       );
     });
+
+    it('creates a child album under an album owned by the current user', async () => {
+      const parent = AlbumFactory.create();
+      const { user: owner } = parent.albumUsers.find(({ role }) => role === AlbumUserRole.Owner)!;
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([parent.id]));
+      mocks.album.getById.mockResolvedValue(getForAlbum(parent));
+      mocks.album.create.mockResolvedValue(getForAlbum(parent));
+      mocks.album.getAllIds.mockResolvedValue([parent.id]);
+      mocks.user.getMetadata.mockResolvedValue([]);
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set());
+
+      await sut.create(AuthFactory.create(owner), { albumName: 'Child album', parentId: parent.id });
+
+      expect(mocks.album.create).toHaveBeenCalledWith(
+        expect.objectContaining({ albumName: 'Child album', parentId: parent.id }),
+        [],
+        [{ userId: owner.id, role: AlbumUserRole.Owner }],
+        owner.id,
+      );
+    });
   });
 
   describe('update', () => {
@@ -447,6 +467,23 @@ describe(AlbumService.name, () => {
         { id: album.id, albumName: 'new album name' },
         owner.id,
       );
+    });
+
+    it('prevents moving an album into one of its descendants', async () => {
+      const album = AlbumFactory.create();
+      const { user: owner } = album.albumUsers.find(({ role }) => role === AlbumUserRole.Owner)!;
+      const descendant = { ...album, id: newUuid(), parentId: album.id };
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id, descendant.id]));
+      mocks.album.getById
+        .mockResolvedValueOnce(getForAlbum(album))
+        .mockResolvedValueOnce(getForAlbum(descendant))
+        .mockResolvedValueOnce(getForAlbum(album));
+
+      await expect(
+        sut.update(AuthFactory.create(owner), album.id, { parentId: descendant.id }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.album.update).not.toHaveBeenCalled();
     });
 
     it('should tell the shared users when the owner changes the album', async () => {
