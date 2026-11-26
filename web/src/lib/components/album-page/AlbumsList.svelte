@@ -133,15 +133,25 @@
     }
   });
   const normalizedSearchQuery = $derived(normalizeSearchString(searchQuery));
-  let filteredAlbums = $derived(
-    normalizedSearchQuery
+  let filteredAlbums = $derived.by(() => {
+    const matchingAlbums = normalizedSearchQuery
       ? albums.filter(
           ({ albumName, description }) =>
             normalizeSearchString(albumName).includes(normalizedSearchQuery) ||
             normalizeSearchString(description).includes(normalizedSearchQuery),
         )
-      : albums,
-  );
+      : albums;
+
+    if (normalizedSearchQuery) {
+      return matchingAlbums;
+    }
+
+    const visibleAlbumIds = new Set(albums.map(({ id }) => id));
+    return matchingAlbums.filter((album) => {
+      const parentId = (album as AlbumResponseDto & { parentId?: string | null }).parentId;
+      return !parentId || !visibleAlbumIds.has(parentId);
+    });
+  });
 
   let albumGroupOption = $derived(getSelectedAlbumGroupOption(userSettings));
   let groupedAlbums = $derived.by(() => {
