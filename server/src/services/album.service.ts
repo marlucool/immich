@@ -63,7 +63,7 @@ export class AlbumService extends BaseService {
 
     const [results, visibleAlbumIds] = await Promise.all([
       this.albumRepository.getMetadataForIds(albums.map((album) => album.id)),
-      this.albumRepository.getAllIds(ownerId),
+      albums.some(({ parentId }) => parentId) ? this.albumRepository.getAllIds(ownerId) : Promise.resolve([]),
     ]);
     const albumMetadata: Record<string, AlbumAssetCount> = {};
     for (const metadata of results) {
@@ -445,15 +445,13 @@ export class AlbumService extends BaseService {
   }
 
   private async mapWithMetadata(album: MapAlbumDto, auth?: AuthDto): Promise<AlbumResponseDto> {
+    const ownerId =
+      auth?.user.id ?? album.albumUsers?.find(({ role }) => role === AlbumUserRole.Owner)?.user.id;
     const [metadata, visibleAlbumIds] = await Promise.all([
       this.albumRepository.getMetadataForIds([album.id]),
-      auth?.sharedLink
-        ? Promise.resolve([])
-        : this.albumRepository.getAllIds(
-            auth?.user.id ??
-              album.albumUsers?.find(({ role }) => role === AlbumUserRole.Owner)?.user.id ??
-              '',
-          ),
+      album.parentId && !auth?.sharedLink && ownerId
+        ? this.albumRepository.getAllIds(ownerId)
+        : Promise.resolve([]),
     ]);
     const visibleIds = new Set(visibleAlbumIds ?? []);
     const parentId = album.parentId && visibleIds.has(album.parentId) ? album.parentId : null;
