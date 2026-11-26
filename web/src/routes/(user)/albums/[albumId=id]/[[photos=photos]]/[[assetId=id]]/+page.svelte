@@ -3,6 +3,7 @@
   import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
   import HeaderActionButton from '#lib/components/HeaderActionButton.svelte';
   import OnEvents from '#lib/components/OnEvents.svelte';
+  import AlbumCardGroup from '#lib/components/album-page/AlbumCardGroup.svelte';
   import AlbumMap from '#lib/components/album-page/AlbumMap.svelte';
   import AlbumSummary from '#lib/components/album-page/AlbumSummary.svelte';
   import ActivityStatus from '#lib/components/asset-viewer/ActivityStatus.svelte';
@@ -37,6 +38,7 @@
   } from '#lib/queries/activity.query.ts';
   import {
     deleteAlbumMutation,
+    getAllAlbumsQuery,
     getAlbumInfoQuery,
     invalidateAlbum,
     updateAlbumInfoMutation,
@@ -52,6 +54,7 @@
   import { delay } from '#lib/utils/asset-utils.ts';
   import { isAlbumsRoute, navigate, type AssetGridRouteSearchParams } from '#lib/utils/navigation.ts';
   import { AlbumUserRole, AssetVisibility, ReactionType } from '@immich/sdk';
+  import type { AlbumResponseDto } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
   import {
     mdiAccountEye,
@@ -76,7 +79,13 @@
   let { params }: PageProps = $props();
 
   const albumQuery = createPreloadedQuery(() => getAlbumInfoQuery(params.albumId));
+  const allAlbumsQuery = createPreloadedQuery(getAllAlbumsQuery);
   const album = $derived(albumQuery.data);
+  const childAlbums = $derived(
+    ((allAlbumsQuery.data ?? []) as (AlbumResponseDto & { parentId?: string | null })[]).filter(
+      ({ parentId }) => parentId === album.id,
+    ),
+  );
   onResourceDelete(
     () => `/albums/${album.id}`,
     () => void goto(Route.albums()),
@@ -367,6 +376,13 @@
               {/if}
 
               <AlbumDescription id={album.id} {isEditor} description={album.description} />
+
+              {#if childAlbums.length > 0}
+                <section class="mt-8">
+                  <h2 class="mb-3 text-2xl font-semibold text-primary">{$t('sub_albums')}</h2>
+                  <AlbumCardGroup albums={childAlbums} showDateRange showItemCount />
+                </section>
+              {/if}
             </section>
           {/if}
 
@@ -500,6 +516,7 @@
                     onClick={() => timelineManager.toggleShowAssetOwners()}
                   />
                 {/if}
+                <ActionMenuItem action={Actions.CreateSubAlbum} />
                 <ActionMenuItem action={Actions.Options} />
                 {#if isOwned && album.assetCount > 0}
                   <MenuOption
