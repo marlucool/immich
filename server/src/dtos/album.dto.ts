@@ -239,7 +239,7 @@ export const mapAlbum = (entity: MaybeDehydrated<MapAlbumDto>, { auth }: { auth?
     createdAt: asDateTimeString(entity.createdAt),
     updatedAt: asDateTimeString(entity.updatedAt),
     id: entity.id,
-    parentId: entity.parentId,
+    parentId: auth?.sharedLink ? null : entity.parentId,
     albumUsers: auth?.sharedLink ? [] : albumUsers,
     shared: hasSharedUser || hasSharedLink,
     hasSharedLink,
