@@ -187,7 +187,7 @@ export class AlbumService extends BaseService {
         albumThumbnailAssetId: dto.albumThumbnailAssetId,
         isActivityEnabled: dto.isActivityEnabled,
         order: dto.order,
-        parentId: dto.parentId,
+        ...(dto.parentId === undefined ? {} : { parentId: dto.parentId }),
       },
       auth.user.id,
     );
@@ -455,7 +455,7 @@ export class AlbumService extends BaseService {
               '',
           ),
     ]);
-    const visibleIds = new Set(visibleAlbumIds);
+    const visibleIds = new Set(visibleAlbumIds ?? []);
     const parentId = album.parentId && visibleIds.has(album.parentId) ? album.parentId : null;
     return { ...mapAlbum({ ...album, parentId }, { auth }), ...mapAlbumMetadata(metadata[0]) };
   }
