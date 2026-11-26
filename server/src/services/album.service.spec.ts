@@ -234,6 +234,7 @@ describe(AlbumService.name, () => {
           description: 'description',
           order: album.order,
           albumThumbnailAssetId: assetId,
+          parentId: null,
         },
         [assetId],
         [
@@ -290,6 +291,7 @@ describe(AlbumService.name, () => {
           description: album.description,
           order: 'asc',
           albumThumbnailAssetId: assetId,
+          parentId: null,
         },
         [assetId],
         [{ userId: owner.id, role: AlbumUserRole.Owner }, albumUser],
@@ -359,6 +361,7 @@ describe(AlbumService.name, () => {
           description: album.description,
           order: 'desc',
           albumThumbnailAssetId: assetId,
+          parentId: null,
         },
         [assetId],
         [{ userId: owner.id, role: AlbumUserRole.Owner }],
