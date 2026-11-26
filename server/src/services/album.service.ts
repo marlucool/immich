@@ -152,7 +152,7 @@ export class AlbumService extends BaseService {
       await this.eventRepository.emit('AlbumInvite', { id: album.id, userId, senderName: auth.user.name });
     }
 
-    return this.mapWithMetadata(album);
+    return this.mapWithMetadata(album, auth);
   }
 
   async update(auth: AuthDto, id: string, dto: UpdateAlbumDto): Promise<AlbumResponseDto> {
@@ -193,7 +193,7 @@ export class AlbumService extends BaseService {
     );
     this.resourceRepository.send({ userIds: getUserIds(album), changed: [Resource.album({ id })] });
 
-    return this.mapWithMetadata(updatedAlbum);
+    return this.mapWithMetadata(updatedAlbum, auth);
   }
 
   async delete(auth: AuthDto, id: string): Promise<void> {
@@ -363,7 +363,7 @@ export class AlbumService extends BaseService {
       });
     }
 
-    return this.mapWithMetadata(await this.findOrFail(id, auth.user.id));
+    return this.mapWithMetadata(await this.findOrFail(id, auth.user.id), auth);
   }
 
   async removeUser(auth: AuthDto, id: string, userId: string | 'me'): Promise<void> {
