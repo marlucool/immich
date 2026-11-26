@@ -61,16 +61,21 @@ export class AlbumService extends BaseService {
       return [];
     }
 
-    // Get asset count for each album. Then map the result to an object:
-    // { [albumId]: assetCount }
-    const results = await this.albumRepository.getMetadataForIds(albums.map((album) => album.id));
+    const [results, visibleAlbumIds] = await Promise.all([
+      this.albumRepository.getMetadataForIds(albums.map((album) => album.id)),
+      this.albumRepository.getAllIds(ownerId),
+    ]);
     const albumMetadata: Record<string, AlbumAssetCount> = {};
     for (const metadata of results) {
       albumMetadata[metadata.albumId] = metadata;
     }
 
+    const visibleIds = new Set(visibleAlbumIds);
     return albums.map((album) => ({
-      ...mapAlbum(album),
+      ...mapAlbum({
+        ...album,
+        parentId: album.parentId && visibleIds.has(album.parentId) ? album.parentId : null,
+      }),
       sharedLinks: undefined,
       ...mapAlbumMetadata(albumMetadata[album.id]),
     }));
@@ -113,6 +118,10 @@ export class AlbumService extends BaseService {
       }
     }
 
+    if (dto.parentId) {
+      await this.validateParentAlbum(auth, dto.parentId);
+    }
+
     const allowedAssetIdsSet = await this.checkAccess({
       auth,
       permission: Permission.AssetShare,
@@ -128,6 +137,7 @@ export class AlbumService extends BaseService {
         description: dto.description,
         albumThumbnailAssetId: assetIds[0] || null,
         order: getPreferences(userMetadata).albums.defaultAssetOrder,
+        parentId: dto.parentId ?? null,
       },
       assetIds,
       [{ userId: auth.user.id, role: AlbumUserRole.Owner }, ...albumUsers],
@@ -150,6 +160,18 @@ export class AlbumService extends BaseService {
 
     const album = await this.findOrFail(id, auth.user.id);
 
+    if (dto.parentId !== undefined) {
+      const isOwner = album.albumUsers?.some(
+        ({ user, role }) => user.id === auth.user.id && role === AlbumUserRole.Owner,
+      );
+      if (!isOwner) {
+        throw new BadRequestException('Only the album owner can change its parent');
+      }
+      if (dto.parentId) {
+        await this.validateParentAlbum(auth, dto.parentId, album.id);
+      }
+    }
+
     if (dto.albumThumbnailAssetId) {
       const results = await this.albumRepository.getAssetIds(id, [dto.albumThumbnailAssetId]);
       if (results.size === 0) {
@@ -165,6 +187,7 @@ export class AlbumService extends BaseService {
         albumThumbnailAssetId: dto.albumThumbnailAssetId,
         isActivityEnabled: dto.isActivityEnabled,
         order: dto.order,
+        parentId: dto.parentId,
       },
       auth.user.id,
     );
@@ -388,12 +411,52 @@ export class AlbumService extends BaseService {
     this.resourceRepository.send({ userIds: getUserIds(album), changed: [Resource.album({ id })] });
   }
 
+  private async validateParentAlbum(auth: AuthDto, parentId: string, albumId?: string): Promise<void> {
+    await this.requireAccess({ auth, permission: Permission.AlbumUpdate, ids: [parentId] });
+
+    let parent = await this.findOrFail(parentId, auth.user.id);
+    const visited = new Set<string>();
+
+    while (true) {
+      if (parent.id === albumId) {
+        throw new BadRequestException('An album cannot be moved into itself or one of its descendants');
+      }
+      if (visited.has(parent.id)) {
+        throw new BadRequestException('Invalid album hierarchy');
+      }
+      visited.add(parent.id);
+
+      const isOwner = parent.albumUsers?.some(
+        ({ user, role }) => user.id === auth.user.id && role === AlbumUserRole.Owner,
+      );
+      if (!isOwner) {
+        throw new BadRequestException('Parent albums must be owned by the current user');
+      }
+
+      if (!parent.parentId) {
+        return;
+      }
+      parent = await this.findOrFail(parent.parentId, auth.user.id);
+    }
+  }
+
   private findOrFail(id: string, authUserId: string) {
     return findOrFail(() => this.albumRepository.getById(id, authUserId), 'Album');
   }
 
   private async mapWithMetadata(album: MapAlbumDto, auth?: AuthDto): Promise<AlbumResponseDto> {
-    const [metadata] = await this.albumRepository.getMetadataForIds([album.id]);
-    return { ...mapAlbum(album, { auth }), ...mapAlbumMetadata(metadata) };
+    const [metadata, visibleAlbumIds] = await Promise.all([
+      this.albumRepository.getMetadataForIds([album.id]),
+      auth?.sharedLink
+        ? Promise.resolve([])
+        : this.albumRepository.getAllIds(
+            auth?.user.id ??
+              album.albumUsers?.find(({ role }) => role === AlbumUserRole.Owner)?.user.id ??
+              '',
+          ),
+    ]);
+    const visibleIds = new Set(visibleAlbumIds);
+    const parentId = album.parentId && visibleIds.has(album.parentId) ? album.parentId : null;
+    return { ...mapAlbum({ ...album, parentId }, { auth }), ...mapAlbumMetadata(metadata[0]) };
   }
 }
