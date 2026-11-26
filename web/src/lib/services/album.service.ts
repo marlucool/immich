@@ -24,6 +24,7 @@ import {
   mdiCogOutline,
   mdiDownload,
   mdiExitToApp,
+  mdiFolderPlusOutline,
   mdiImageOutline,
   mdiLink,
   mdiPlus,
@@ -75,6 +76,14 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => modalManager.show(SharedLinkCreateModal, { albumId: album.id }),
   };
 
+  const CreateSubAlbum: ActionItem = {
+    title: $t('create_sub_album'),
+    icon: mdiFolderPlusOutline,
+    color: 'primary',
+    $if: () => isOwned,
+    onAction: () => createAlbumAndRedirect(undefined, undefined, album.id),
+  };
+
   const Delete: ActionItem = {
     title: $t('delete_album'),
     icon: mdiTrashCanOutline,
@@ -117,7 +126,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => modalManager.show(AlbumOptionsModal, { album }),
   };
 
-  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, Options, Share };
+  return { AddUsers, CreateSharedLink, CreateSubAlbum, Delete, Download, Edit, Leave, Options, Share };
 };
 
 export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: { id: string }) => {
