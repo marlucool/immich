@@ -279,7 +279,7 @@ export class AlbumRepository {
 
   @GenerateSql({
     params: [
-      { albumName: DummyValue.STRING },
+      { albumName: DummyValue.STRING, parentId: DummyValue.UUID },
       [],
       [{ userId: DummyValue.UUID, role: AlbumUserRole.Owner }, DummyValue.UUID],
     ],
